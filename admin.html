@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — The Xyra Studio</title>
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { bg:'#050505', surface:'#101010', mint:'#4EEDB0', offwhite:'#FFFFFF', gray:{DEFAULT:'#BDBDBD'} },
+    fontFamily: { display:['Space Grotesk','sans-serif'], body:['Inter','sans-serif'] }
+  }}}
+</script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<link rel="stylesheet" href="style.css">
+
+<style>
+  body { background: var(--bg); }
+  .admin-shell { display: flex; min-height: 100vh; }
+  .admin-sidebar {
+    width: 240px; flex-shrink: 0; background: var(--surface);
+    border-right: 1px solid rgba(255,255,255,0.08);
+    padding: 1.75rem 1.25rem; display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  .admin-tab {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.65rem 0.85rem; border-radius: 10px;
+    color: var(--gray); font-size: 0.9rem; cursor: pointer; transition: all 0.2s ease;
+  }
+  .admin-tab:hover { background: rgba(255,255,255,0.04); color: var(--white); }
+  .admin-tab.active { background: rgba(78,237,176,0.1); color: var(--mint); }
+  .admin-main { flex: 1; padding: 2rem 2.5rem; max-width: 1100px; }
+  .admin-panel { display: none; }
+  .admin-panel.active { display: block; }
+  .admin-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 0.6rem;
+  }
+  .admin-row-icon-btn {
+    width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    color: var(--gray); background: rgba(255,255,255,0.04); cursor: pointer; transition: all 0.15s ease;
+  }
+  .admin-row-icon-btn:hover { color: var(--white); background: rgba(255,255,255,0.09); }
+  .admin-row-icon-btn.danger:hover { color: #ff6b6b; }
+  .admin-form-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1.5rem; }
+  .admin-badge { font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(78,237,176,0.12); color: var(--mint); }
+  .admin-toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface);
+    border: 1px solid rgba(78,237,176,0.3); color: var(--mint); padding: 0.8rem 1.2rem;
+    border-radius: 10px; font-size: 0.85rem; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  .admin-toast.show { opacity: 1; }
+  .admin-toast.error { border-color: rgba(255,107,107,0.4); color: #ff6b6b; }
+</style>
+</head>
+<body class="text-offwhite font-body antialiased">
+
+<!-- ============================ LOGIN SCREEN ============================ -->
+<div id="loginScreen" class="min-h-screen flex items-center justify-center px-6">
+  <div class="glass-card p-8 w-full max-w-sm">
+    <div class="flex items-center gap-2 mb-8 justify-center">
+      <img src="images/logo.png" alt="The Xyra Studio" class="w-8 h-8">
+      <span class="font-display text-lg">XYRA<span class="text-mint">.</span> Admin</span>
+    </div>
+    <form id="loginForm" novalidate>
+      <div class="field mb-4"><label for="loginEmail">Email</label><input type="email" id="loginEmail" required placeholder="you@thexyrastudio.com"></div>
+      <div class="field"><label for="loginPassword">Password</label><input type="password" id="loginPassword" required placeholder="••••••••"></div>
+      <p id="loginError" class="text-xs text-red-400 mt-4 hidden"></p>
+      <button type="submit" class="btn-primary w-full justify-center mt-7">Sign In</button>
+    </form>
+    <p class="text-xs text-gray mt-6 text-center leading-relaxed">
+      No account yet? Create one in your Firebase Console → Authentication → Users. See <code>ADMIN-SETUP.md</code>.
+    </p>
+  </div>
+</div>
+
+<!-- ============================ ADMIN DASHBOARD ============================ -->
+<div id="adminShell" class="admin-shell hidden">
+  <aside class="admin-sidebar">
+    <div class="flex items-center gap-2 mb-8 px-1">
+      <img src="images/logo.png" alt="The Xyra Studio" class="w-7 h-7">
+      <span class="font-display text-base">XYRA<span class="text-mint">.</span></span>
+    </div>
+    <div class="admin-tab active" data-tab="settings"><i data-lucide="settings" class="w-4 h-4"></i> Site Settings</div>
+    <div class="admin-tab" data-tab="portfolio"><i data-lucide="layout-grid" class="w-4 h-4"></i> Portfolio</div>
+    <div class="admin-tab" data-tab="services"><i data-lucide="sparkles" class="w-4 h-4"></i> Services</div>
+    <div class="admin-tab" data-tab="pricing"><i data-lucide="tag" class="w-4 h-4"></i> Pricing</div>
+    <div class="admin-tab" data-tab="testimonials"><i data-lucide="quote" class="w-4 h-4"></i> Testimonials</div>
+    <div class="admin-tab" data-tab="stats"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Stats</div>
+    <div class="admin-tab" data-tab="faqs"><i data-lucide="help-circle" class="w-4 h-4"></i> FAQs</div>
+    <div class="admin-tab" data-tab="messages"><i data-lucide="mail" class="w-4 h-4"></i> Messages</div>
+    <div class="admin-tab" data-tab="newsletter"><i data-lucide="send" class="w-4 h-4"></i> Newsletter</div>
+    <div class="mt-auto pt-6 border-t border-white/10">
+      <div id="userEmail" class="text-xs text-gray mb-3 px-1 truncate"></div>
+      <div id="logoutBtn" class="admin-tab"><i data-lucide="log-out" class="w-4 h-4"></i> Sign Out</div>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+
+    <!-- ---------- SITE SETTINGS ---------- -->
+    <section class="admin-panel active" id="panel-settings">
+      <h1 class="font-display text-2xl mb-1">Site Settings</h1>
+      <p class="text-gray text-sm mb-6">Homepage hero, About page copy, footer tagline, and contact/social links — shown across the whole site.</p>
+
+      <form id="settingsForm" class="admin-form-card grid sm:grid-cols-2 gap-4">
+        <h2 class="font-display text-sm text-mint sm:col-span-2 mb-0">Homepage Hero</h2>
+        <div class="field sm:col-span-2"><label>Eyebrow badge text</label><input type="text" name="heroEyebrow" placeholder="Marketing with fewer buzzwords and more results"></div>
+        <div class="field"><label>Headline — line 1</label><input type="text" name="heroLine1" placeholder="We Don't Just Market Brands."></div>
+        <div class="field"><label>Headline — line 2</label><input type="text" name="heroLine2" placeholder="We Build Digital Movements."></div>
+        <div class="field sm:col-span-2"><label>Tagline (under headline)</label><input type="text" name="heroTagline" placeholder="Creative. Strategic. Unforgettable."></div>
+
+        <h2 class="font-display text-sm text-mint sm:col-span-2 mb-0 mt-4">About Page</h2>
+        <div class="field sm:col-span-2"><label>Heading</label><input type="text" name="aboutHeading" placeholder="We take ideas seriously. Ourselves? Not always."></div>
+        <div class="field sm:col-span-2"><label>Intro paragraph</label><textarea name="aboutIntro" rows="2"></textarea></div>
+        <div class="field"><label>Mission</label><textarea name="missionText" rows="2"></textarea></div>
+        <div class="field"><label>Vision</label><textarea name="visionText" rows="2"></textarea></div>
+        <div class="field"><label>Values</label><textarea name="valuesText" rows="2"></textarea></div>
+
+        <h2 class="font-display text-sm text-mint sm:col-span-2 mb-0 mt-4">Footer</h2>
+        <div class="field sm:col-span-2"><label>Footer tagline</label><input type="text" name="footerTagline" placeholder="Coffee first. Campaigns second."></div>
+
+        <h2 class="font-display text-sm text-mint sm:col-span-2 mb-0 mt-4">Contact &amp; Social</h2>
+        <div class="field"><label>Email</label><input type="email" name="email" placeholder="hello@thexyrastudio.com"></div>
+        <div class="field"><label>WhatsApp number (digits only, with country code)</label><input type="text" name="whatsapp" placeholder="15551234567"></div>
+        <div class="field"><label>Instagram (handle or full URL)</label><input type="text" name="instagram" placeholder="thexyrastudio"></div>
+        <div class="field"><label>LinkedIn (handle or full URL)</label><input type="text" name="linkedin" placeholder="thexyrastudio"></div>
+
+        <button type="submit" class="btn-primary-sm sm:col-span-2 justify-center mt-2">Save Settings</button>
+      </form>
+    </section>
+
+    <!-- ---------- PORTFOLIO ---------- -->
+    <section class="admin-panel" id="panel-portfolio">
+      <h1 class="font-display text-2xl mb-1">Portfolio</h1>
+      <p class="text-gray text-sm mb-6">Case studies shown on the Portfolio page. Lower "Order" shows first.</p>
+
+      <div class="admin-form-card mb-8">
+        <h2 class="font-display text-sm text-mint mb-4">Add project</h2>
+        <form id="portfolioForm" class="grid sm:grid-cols-2 gap-4">
+          <div class="field"><label>Title</label><input type="text" name="title" required placeholder="Nova Skincare Identity"></div>
+          <div class="field">
+            <label>Category</label>
+            <select name="category" required>
+              <option value="branding">Branding</option>
+              <option value="websites">Websites</option>
+              <option value="ads">Ads</option>
+              <option value="reels">Reels</option>
+            </select>
+          </div>
+          <div class="field"><label>Image URL (optional — leave blank for gradient placeholder)</label><input type="url" name="imageUrl" placeholder="https://..."></div>
+          <div class="field"><label>Order</label><input type="number" name="order" value="0"></div>
+          <button type="submit" class="btn-primary-sm sm:col-span-2 justify-center">Add Project</button>
+        </form>
+      </div>
+
+      <div id="portfolioList"></div>
+    </section>
+
+    <!-- ---------- SERVICES ---------- -->
+    <section class="admin-panel" id="panel-services">
+      <h1 class="font-display text-2xl mb-1">Services</h1>
+      <p class="text-gray text-sm mb-6">The 8 (or however many) offerings on the Services page.</p>
+
+      <div class="admin-form-card mb-8">
+        <h2 class="font-display text-sm text-mint mb-4">Add service</h2>
+        <form id="servicesForm" class="grid sm:grid-cols-2 gap-4">
+          <div class="field"><label>Title</label><input type="text" name="title" required placeholder="SEO"></div>
+          <div class="field"><label>Icon (lucide.dev icon name)</label><input type="text" name="icon" placeholder="search"></div>
+          <div class="field sm:col-span-2"><label>Subtitle (short, funny)</label><input type="text" name="subtitle" placeholder="Helping Google become your biggest fan."></div>
+          <div class="field sm:col-span-2"><label>Description</label><textarea name="description" rows="2" placeholder="Technical audits, content strategy..."></textarea></div>
+          <div class="field"><label>Order</label><input type="number" name="order" value="0"></div>
+          <button type="submit" class="btn-primary-sm sm:col-span-2 justify-center">Add Service</button>
+        </form>
+      </div>
+
+      <div id="servicesList"></div>
+    </section>
+
+    <!-- ---------- PRICING ---------- -->
+    <section class="admin-panel" id="panel-pricing">
+      <h1 class="font-display text-2xl mb-1">Pricing</h1>
+      <p class="text-gray text-sm mb-6">The tier cards on the Pricing page.</p>
+
+      <div class="admin-form-card mb-8">
+        <h2 class="font-display text-sm text-mint mb-4">Add tier</h2>
+        <form id="pricingForm" class="grid sm:grid-cols-2 gap-4">
+          <div class="field"><label>Name</label><input type="text" name="name" required placeholder="Growth"></div>
+          <div class="field"><label>Price</label><input type="text" name="price" required placeholder="$1,899 or Custom"></div>
+          <div class="field"><label>Period (optional)</label><input type="text" name="period" placeholder="/mo"></div>
+          <div class="field"><label>CTA button text</label><input type="text" name="ctaText" placeholder="Get Started" value="Get Started"></div>
+          <div class="field sm:col-span-2"><label>Description</label><input type="text" name="description" placeholder="For brands ready to scale acquisition."></div>
+          <div class="field sm:col-span-2"><label>Features (one per line)</label><textarea name="features" rows="4" placeholder="Full SEO + content strategy
+Google + Meta Ads managed"></textarea></div>
+          <div class="field"><label>Order</label><input type="number" name="order" value="0"></div>
+          <label class="flex items-center gap-2 text-sm text-gray mt-6"><input type="checkbox" name="popular" class="accent-mint w-4 h-4"> Mark as "Most Popular"</label>
+          <button type="submit" class="btn-primary-sm sm:col-span-2 justify-center">Add Tier</button>
+        </form>
+      </div>
+
+      <div id="pricingList"></div>
+    </section>
+
+    <!-- ---------- TESTIMONIALS ---------- -->
+    <section class="admin-panel" id="panel-testimonials">
+      <h1 class="font-display text-2xl mb-1">Testimonials</h1>
+      <p class="text-gray text-sm mb-6">The client quote slider on the homepage.</p>
+
+      <div class="admin-form-card mb-8">
+        <h2 class="font-display text-sm text-mint mb-4">Add testimonial</h2>
+        <form id="testimonialsForm" class="grid sm:grid-cols-2 gap-4">
+          <div class="field sm:col-span-2"><label>Quote</label><textarea name="quote" rows="2" required placeholder="Xyra rebuilt our entire acquisition engine..."></textarea></div>
+          <div class="field"><label>Name</label><input type="text" name="name" required placeholder="Aarav Kapoor"></div>
+          <div class="field"><label>Role / Company</label><input type="text" name="role" placeholder="Founder, Nova Skincare"></div>
+          <div class="field"><label>Initials (optional — auto-filled from name)</label><input type="text" name="initials" maxlength="3" placeholder="AK"></div>
+          <div class="field"><label>Order</label><input type="number" name="order" value="0"></div>
+          <button type="submit" class="btn-primary-sm sm:col-span-2 justify-center">Add Testimonial</button>
+        </form>
+      </div>
+
+      <div id="testimonialsList"></div>
+    </section>
+
+    <!-- ---------- STATS ---------- -->
+    <section class="admin-panel" id="panel-stats">
+      <h1 class="font-display text-2xl mb-1">Stats</h1>
+      <p class="text-gray text-sm mb-6">The animated "By The Numbers" counters on the About page.</p>
+
+      <div class="admin-form-card mb-8">
+        <h2 class="font-display text-sm text-mint mb-4">Add stat</h2>
+        <form id="statsForm" class="grid sm:grid-cols-2 gap-4">
+          <div class="field"><label>Number</label><input type="number" name="number" required placeholder="180"></div>
+          <div class="field"><label>Suffix (optional)</label><input type="text" name="suffix" placeholder="+ or % or M+"></div>
+          <div class="field sm:col-span-2"><label>Label</label><input type="text" name="label" required placeholder="Brands Grown"></div>
+          <div class="field"><label>Order</label><input type="number" name="order" value="0"></div>
+          <button type="submit" class="btn-primary-sm sm:col-span-2 justify-center">Add Stat</button>
+        </form>
+      </div>
+
+      <div id="statsList"></div>
+    </section>
+
+    <!-- ---------- FAQS ---------- -->
+    <section class="admin-panel" id="panel-faqs">
+      <h1 class="font-display text-2xl mb-1">FAQs</h1>
+      <p class="text-gray text-sm mb-6">The accordion on the Pricing page.</p>
+
+      <div class="admin-form-card mb-8">
+        <h2 class="font-display text-sm text-mint mb-4">Add FAQ</h2>
+        <form id="faqsForm" class="grid gap-4">
+          <div class="field"><label>Question</label><input type="text" name="question" required placeholder="How soon will we see results?"></div>
+          <div class="field"><label>Answer</label><textarea name="answer" rows="2" required></textarea></div>
+          <div class="field" style="max-width:120px;"><label>Order</label><input type="number" name="order" value="0"></div>
+          <button type="submit" class="btn-primary-sm justify-center">Add FAQ</button>
+        </form>
+      </div>
+
+      <div id="faqsList"></div>
+    </section>
+
+    <!-- ---------- MESSAGES ---------- -->
+    <section class="admin-panel" id="panel-messages">
+      <h1 class="font-display text-2xl mb-1">Messages</h1>
+      <p class="text-gray text-sm mb-6">Submissions from the Contact page form.</p>
+      <div id="messagesList"></div>
+    </section>
+
+    <!-- ---------- NEWSLETTER ---------- -->
+    <section class="admin-panel" id="panel-newsletter">
+      <h1 class="font-display text-2xl mb-1">Newsletter</h1>
+      <p class="text-gray text-sm mb-6">Emails collected from the footer signup across all pages.</p>
+      <div id="newsletterList"></div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" class="admin-toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, getDocs, getDoc, setDoc, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const loginScreen = document.getElementById("loginScreen");
+const adminShell = document.getElementById("adminShell");
+const toastEl = document.getElementById("toast");
+
+function toast(msg, isError = false) {
+  toastEl.textContent = msg;
+  toastEl.classList.toggle("error", isError);
+  toastEl.classList.add("show");
+  setTimeout(() => toastEl.classList.remove("show"), 2600);
+}
+
+/* ---------------- Auth ---------------- */
+const loginForm = document.getElementById("loginForm");
+const loginError = document.getElementById("loginError");
+
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginError.classList.add("hidden");
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    loginError.textContent = "Couldn't sign in — check your email and password.";
+    loginError.classList.remove("hidden");
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loginScreen.classList.add("hidden");
+    adminShell.classList.remove("hidden");
+    document.getElementById("userEmail").textContent = user.email;
+    loadAll();
+  } else {
+    loginScreen.classList.remove("hidden");
+    adminShell.classList.add("hidden");
+  }
+  if (window.lucide) window.lucide.createIcons();
+});
+
+/* ---------------- Tabs ---------------- */
+document.querySelectorAll(".admin-tab[data-tab]").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".admin-tab[data-tab]").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".admin-panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+  });
+});
+
+/* ---------------- Helpers ---------------- */
+function escapeHtml(str = "") {
+  return String(str)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function fmtDate(ts) {
+  if (!ts || !ts.toDate) return "";
+  return ts.toDate().toLocaleString();
+}
+
+async function loadAll() {
+  loadSettings();
+  loadPortfolio();
+  loadServices();
+  loadPricing();
+  loadTestimonials();
+  loadStats();
+  loadFaqs();
+  loadMessages();
+  loadNewsletter();
+}
+
+/* ---------------- Site Settings ---------------- */
+const settingsForm = document.getElementById("settingsForm");
+settingsForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const data = {
+    heroEyebrow: f.heroEyebrow.value.trim(),
+    heroLine1: f.heroLine1.value.trim(),
+    heroLine2: f.heroLine2.value.trim(),
+    heroTagline: f.heroTagline.value.trim(),
+    aboutHeading: f.aboutHeading.value.trim(),
+    aboutIntro: f.aboutIntro.value.trim(),
+    missionText: f.missionText.value.trim(),
+    visionText: f.visionText.value.trim(),
+    valuesText: f.valuesText.value.trim(),
+    footerTagline: f.footerTagline.value.trim(),
+    email: f.email.value.trim(),
+    whatsapp: f.whatsapp.value.trim(),
+    instagram: f.instagram.value.trim(),
+    linkedin: f.linkedin.value.trim(),
+    updatedAt: serverTimestamp()
+  };
+  try {
+    await setDoc(doc(db, "settings", "site"), data, { merge: true });
+    toast("Settings saved");
+  } catch (err) { toast("Failed to save settings", true); }
+});
+
+async function loadSettings() {
+  try {
+    const snap = await getDoc(doc(db, "settings", "site"));
+    if (!snap.exists()) return;
+    const s = snap.data();
+    const f = settingsForm;
+    Object.keys(s).forEach(key => {
+      if (f[key] && typeof s[key] === "string") f[key].value = s[key];
+    });
+  } catch (err) { /* leave form blank */ }
+}
+
+/* ---------------- Portfolio ---------------- */
+document.getElementById("portfolioForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  try {
+    await addDoc(collection(db, "portfolio"), {
+      title: f.title.value.trim(),
+      category: f.category.value,
+      imageUrl: f.imageUrl.value.trim(),
+      order: Number(f.order.value) || 0,
+      createdAt: serverTimestamp()
+    });
+    f.reset();
+    toast("Project added");
+    loadPortfolio();
+  } catch (err) { toast("Failed to add project", true); }
+});
+
+async function loadPortfolio() {
+  const list = document.getElementById("portfolioList");
+  list.innerHTML = '<p class="text-gray text-sm">Loading…</p>';
+  const snap = await getDocs(query(collection(db, "portfolio"), orderBy("order", "asc")));
+  if (snap.empty) { list.innerHTML = '<p class="text-gray text-sm">No projects yet.</p>'; return; }
+  list.innerHTML = snap.docs.map(d => {
+    const p = d.data();
+    return `<div class="admin-row">
+      <div>
+        <span class="admin-badge">${escapeHtml(p.category)}</span>
+        <span class="ml-2 font-display text-sm">${escapeHtml(p.title)}</span>
+        <span class="text-gray text-xs ml-2">order: ${p.order ?? 0}</span>
+      </div>
+      <div class="admin-row-icon-btn danger" data-del="portfolio:${d.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+    </div>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/* ---------------- Services ---------------- */
+document.getElementById("servicesForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  try {
+    await addDoc(collection(db, "services"), {
+      title: f.title.value.trim(),
+      icon: f.icon.value.trim() || "sparkles",
+      subtitle: f.subtitle.value.trim(),
+      description: f.description.value.trim(),
+      order: Number(f.order.value) || 0,
+      createdAt: serverTimestamp()
+    });
+    f.reset();
+    toast("Service added");
+    loadServices();
+  } catch (err) { toast("Failed to add service", true); }
+});
+
+async function loadServices() {
+  const list = document.getElementById("servicesList");
+  list.innerHTML = '<p class="text-gray text-sm">Loading…</p>';
+  const snap = await getDocs(query(collection(db, "services"), orderBy("order", "asc")));
+  if (snap.empty) { list.innerHTML = '<p class="text-gray text-sm">No services yet.</p>'; return; }
+  list.innerHTML = snap.docs.map(d => {
+    const s = d.data();
+    return `<div class="admin-row">
+      <div>
+        <span class="font-display text-sm">${escapeHtml(s.title)}</span>
+        <span class="text-gray text-xs ml-2">${escapeHtml(s.subtitle || "")}</span>
+      </div>
+      <div class="admin-row-icon-btn danger" data-del="services:${d.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+    </div>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/* ---------------- Pricing ---------------- */
+document.getElementById("pricingForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const features = f.features.value.split("\n").map(s => s.trim()).filter(Boolean);
+  try {
+    await addDoc(collection(db, "pricing"), {
+      name: f.name.value.trim(),
+      price: f.price.value.trim(),
+      period: f.period.value.trim(),
+      ctaText: f.ctaText.value.trim() || "Get Started",
+      description: f.description.value.trim(),
+      features,
+      popular: f.popular.checked,
+      order: Number(f.order.value) || 0,
+      createdAt: serverTimestamp()
+    });
+    f.reset();
+    toast("Tier added");
+    loadPricing();
+  } catch (err) { toast("Failed to add tier", true); }
+});
+
+async function loadPricing() {
+  const list = document.getElementById("pricingList");
+  list.innerHTML = '<p class="text-gray text-sm">Loading…</p>';
+  const snap = await getDocs(query(collection(db, "pricing"), orderBy("order", "asc")));
+  if (snap.empty) { list.innerHTML = '<p class="text-gray text-sm">No tiers yet.</p>'; return; }
+  list.innerHTML = snap.docs.map(d => {
+    const p = d.data();
+    return `<div class="admin-row">
+      <div>
+        <span class="font-display text-sm">${escapeHtml(p.name)}</span>
+        <span class="text-mint text-xs ml-2">${escapeHtml(p.price)}${escapeHtml(p.period || "")}</span>
+        ${p.popular ? '<span class="admin-badge ml-2">Popular</span>' : ""}
+      </div>
+      <div class="admin-row-icon-btn danger" data-del="pricing:${d.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+    </div>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/* ---------------- Testimonials ---------------- */
+document.getElementById("testimonialsForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const name = f.name.value.trim();
+  try {
+    await addDoc(collection(db, "testimonials"), {
+      quote: f.quote.value.trim(),
+      name,
+      role: f.role.value.trim(),
+      initials: f.initials.value.trim() || name.split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase(),
+      order: Number(f.order.value) || 0,
+      createdAt: serverTimestamp()
+    });
+    f.reset();
+    toast("Testimonial added");
+    loadTestimonials();
+  } catch (err) { toast("Failed to add testimonial", true); }
+});
+
+async function loadTestimonials() {
+  const list = document.getElementById("testimonialsList");
+  list.innerHTML = '<p class="text-gray text-sm">Loading…</p>';
+  const snap = await getDocs(query(collection(db, "testimonials"), orderBy("order", "asc")));
+  if (snap.empty) { list.innerHTML = '<p class="text-gray text-sm">No testimonials yet.</p>'; return; }
+  list.innerHTML = snap.docs.map(d => {
+    const t = d.data();
+    return `<div class="admin-row items-start flex-col sm:flex-row">
+      <div class="flex-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-display text-sm">${escapeHtml(t.name)}</span>
+          <span class="text-gray text-xs">${escapeHtml(t.role || "")}</span>
+        </div>
+        <p class="text-gray text-sm mt-1">"${escapeHtml(t.quote)}"</p>
+      </div>
+      <div class="admin-row-icon-btn danger mt-2 sm:mt-0" data-del="testimonials:${d.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+    </div>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/* ---------------- Stats ---------------- */
+document.getElementById("statsForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  try {
+    await addDoc(collection(db, "stats"), {
+      number: Number(f.number.value) || 0,
+      suffix: f.suffix.value.trim(),
+      label: f.label.value.trim(),
+      order: Number(f.order.value) || 0,
+      createdAt: serverTimestamp()
+    });
+    f.reset();
+    toast("Stat added");
+    loadStats();
+  } catch (err) { toast("Failed to add stat", true); }
+});
+
+async function loadStats() {
+  const list = document.getElementById("statsList");
+  list.innerHTML = '<p class="text-gray text-sm">Loading…</p>';
+  const snap = await getDocs(query(collection(db, "stats"), orderBy("order", "asc")));
+  if (snap.empty) { list.innerHTML = '<p class="text-gray text-sm">No stats yet.</p>'; return; }
+  list.innerHTML = snap.docs.map(d => {
+    const s = d.data();
+    return `<div class="admin-row">
+      <div><span class="font-display text-sm text-mint">${escapeHtml(String(s.number))}${escapeHtml(s.suffix || "")}</span><span class="text-sm ml-2">${escapeHtml(s.label)}</span></div>
+      <div class="admin-row-icon-btn danger" data-del="stats:${d.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+    </div>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/* ---------------- FAQs ---------------- */
+document.getElementById("faqsForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  try {
+    await addDoc(collection(db, "faqs"), {
+      question: f.question.value.trim(),
+      answer: f.answer.value.trim(),
+      order: Number(f.order.value) || 0,
+      createdAt: serverTimestamp()
+    });
+    f.reset();
+    toast("FAQ added");
+    loadFaqs();
+  } catch (err) { toast("Failed to add FAQ", true); }
+});
+
+async function loadFaqs() {
+  const list = document.getElementById("faqsList");
+  list.innerHTML = '<p class="text-gray text-sm">Loading…</p>';
+  const snap = await getDocs(query(collection(db, "faqs"), orderBy("order", "asc")));
+  if (snap.empty) { list.innerHTML = '<p class="text-gray text-sm">No FAQs yet.</p>'; return; }
+  list.innerHTML = snap.docs.map(d => {
+    const q = d.data();
+    return `<div class="admin-row items-start flex-col sm:flex-row">
+      <div class="flex-1">
+        <p class="font-display text-sm">${escapeHtml(q.question)}</p>
+        <p class="text-gray text-sm mt-1">${escapeHtml(q.answer)}</p>
+      </div>
+      <div class="admin-row-icon-btn danger mt-2 sm:mt-0" data-del="faqs:${d.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+    </div>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/* ---------------- Messages ---------------- */
+async function loadMessages() {
+  const list = document.getElementById("messagesList");
+  list.innerHTML = '<p class="text-gray text-sm">Loading…</p>';
+  const snap = await getDocs(query(collection(db, "submissions"), orderBy("createdAt", "desc")));
+  if (snap.empty) { list.innerHTML = '<p class="text-gray text-sm">No messages yet.</p>'; return; }
+  list.innerHTML = snap.docs.map(d => {
+    const m = d.data();
+    return `<div class="admin-row items-start flex-col sm:flex-row">
+      <div class="flex-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-display text-sm">${escapeHtml(m.name || "—")}</span>
+          <span class="text-gray text-xs">${escapeHtml(m.email || "")}</span>
+          ${m.service ? `<span class="admin-badge">${escapeHtml(m.service)}</span>` : ""}
+          <span class="text-gray text-xs">${fmtDate(m.createdAt)}</span>
+        </div>
+        <p class="text-gray text-sm mt-2">${escapeHtml(m.message || "")}</p>
+      </div>
+      <div class="admin-row-icon-btn danger mt-2 sm:mt-0" data-del="submissions:${d.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+    </div>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/* ---------------- Newsletter ---------------- */
+async function loadNewsletter() {
+  const list = document.getElementById("newsletterList");
+  list.innerHTML = '<p class="text-gray text-sm">Loading…</p>';
+  const snap = await getDocs(query(collection(db, "newsletter"), orderBy("createdAt", "desc")));
+  if (snap.empty) { list.innerHTML = '<p class="text-gray text-sm">No signups yet.</p>'; return; }
+  list.innerHTML = snap.docs.map(d => {
+    const n = d.data();
+    return `<div class="admin-row">
+      <div><span class="text-sm">${escapeHtml(n.email)}</span><span class="text-gray text-xs ml-3">${fmtDate(n.createdAt)}</span></div>
+      <div class="admin-row-icon-btn danger" data-del="newsletter:${d.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+    </div>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/* ---------------- Delete (event delegation across all lists) ---------------- */
+document.getElementById("adminShell").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-del]");
+  if (!btn) return;
+  const [coll, id] = btn.dataset.del.split(":");
+  if (!confirm("Delete this item? This can't be undone.")) return;
+  try {
+    await deleteDoc(doc(db, coll, id));
+    toast("Deleted");
+    if (coll === "portfolio") loadPortfolio();
+    if (coll === "services") loadServices();
+    if (coll === "pricing") loadPricing();
+    if (coll === "testimonials") loadTestimonials();
+    if (coll === "stats") loadStats();
+    if (coll === "faqs") loadFaqs();
+    if (coll === "submissions") loadMessages();
+    if (coll === "newsletter") loadNewsletter();
+  } catch (err) { toast("Delete failed", true); }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page Not Found — The Xyra Studio</title>
+<meta name="robots" content="noindex, follow">
+<link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { bg:'#050505', surface:'#101010', mint:'#4EEDB0', offwhite:'#FFFFFF', gray:{DEFAULT:'#BDBDBD'} },
+    fontFamily: { display:['Space Grotesk','sans-serif'], body:['Inter','sans-serif'] }
+  }}}
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-bg text-offwhite font-body min-h-screen flex items-center justify-center px-6 relative overflow-hidden">
+
+  <div class="aurora" aria-hidden="true">
+    <div class="aurora-blob blob-1"></div>
+    <div class="aurora-blob blob-3"></div>
+  </div>
+
+  <div class="relative z-10 text-center max-w-lg">
+    <img src="images/logo.png" alt="The Xyra Studio" class="mx-auto w-16 h-auto mb-6 opacity-90">
+    <p class="error-code">404</p>
+    <h1 class="font-display text-2xl md:text-3xl mt-4">This page went looking for coffee.</h1>
+    <p class="text-gray mt-4 leading-relaxed">
+      It hasn't come back yet. The page you're after doesn't exist or wandered off somewhere else on the internet.
+    </p>
+    <a href="index.html" class="inline-flex items-center gap-2 mt-8 bg-mint text-bg font-semibold px-7 py-3.5 rounded-full hover:-translate-y-0.5 transition-transform">
+      Take Me Home
+    </a>
+  </div>
+
+</body>
+</html>
